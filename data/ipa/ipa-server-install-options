@@ -1,4 +1,8 @@
 --admin-password=Welcome2KolabSystems
+--auto-reverse
 --ds-password=Welcome2KolabSystems
+--no-forwarders
+--no-ntp
 --realm=EXAMPLE.LOCAL
+--setup-dns
 --unattended
