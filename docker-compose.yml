@@ -1,0 +1,88 @@
+
+# Web application authentication developer setup
+#
+# Copyright 2016--2018 Jan Pazdziora
+#
+# Licensed under the Apache License, Version 2.0 (the "License").
+
+version: '2.1'
+services:
+    ipa:
+        container_name: kolab_ipa_1
+        image: freeipa/freeipa-server:latest
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        volumes:
+            - ./data/ipa/:/data/:Z
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+        tmpfs:
+            - /run
+            - /tmp
+        hostname: ipa.example.local
+        stdin_open: true
+        tty: true
+        stop_signal: RTMIN+3
+        healthcheck:
+            test: ldapsearch -x -b "dc=example,dc=local"
+            interval: 10s
+            timeout: 5s
+            retries: 60
+
+    mysql:
+        container_name: kolab_mariadb_1
+        image: mariadb:latest
+        hostname: mysql.example.local
+        volumes:
+            - ./data/mariadb/:/var/lib/mysql/
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+        environment:
+            MYSQL_ROOT_PASSWORD: Welcome2KolabSystems
+            MYSQL_DATABASE: keycloak
+            MYSQL_USER: keycloak
+            MYSQL_PASSWORD: Welcome2KolabSystems
+        ports:
+            - 3306:3306
+        healthcheck:
+            test: mysqladmin --user=root --password=Welcome2KolabSystems ping
+            interval: 2s
+            timeout: 5s
+            retries: 30
+
+    keycloak:
+        container_name: kolab_keycloak_1
+        image: jboss/keycloak:latest
+        hostname: keycloak.example.local
+        volumes:
+            - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
+            - ./data/ssl/:/etc/x509/https/:ro
+        #sysctls:
+            #- net.core.wmem_max=1M
+            #- net.core.rmem_max=25M
+        environment:
+            #DB_VENDOR: h2
+            DB_ADDR: mysql
+            DB_DATABASE: keycloak
+            DB_PASSWORD: Welcome2KolabSystems
+            DB_USER: keycloak
+            DB_VENDOR: mysql
+            KEYCLOAK_IMPORT: /etc/settings/realm.json
+            KEYCLOAK_PASSWORD: Welcome2KolabSystems
+            KEYCLOAK_USER: admin
+        ports:
+            - 8080:8080
+            - 8443:8443
+            - 9990:9990
+        depends_on:
+            ipa:
+                condition: service_healthy
+            mysql:
+                condition: service_healthy
+        links:
+            - ipa:ipa.example.local
+            - mysql:mysql.example.local
+        tmpfs:
+            - /run
+            - /tmp
+        stdin_open: true
+        tty: true
+        stop_signal: RTMIN+3
