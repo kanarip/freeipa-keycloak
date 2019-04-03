@@ -1,0 +1,38 @@
+[Unit]
+Description=The Keycloak Server
+After=syslog.target network.target
+Before=httpd.service
+
+[Service]
+Type=simple
+Environment=JAVA_HOME=/usr/lib/jvm/java
+Environment=KEYCLOAK_VERSION=5.0.0
+Environment=JDBC_POSTGRES_VERSION=42.2.5
+Environment=JDBC_MYSQL_VERSION=5.1.46
+Environment=JDBC_MARIADB_VERSION=2.2.3
+Environment=LAUNCH_JBOSS_IN_BACKGROUND=1
+Environment=PROXY_ADDRESS_FORWARDING=false
+Environment=JBOSS_HOME=/opt/jboss/keycloak
+Environment=LANG=en_US.UTF-8
+EnvironmentFile=-/etc/sysconfig/keycloak
+
+User=jboss
+Group=jboss
+LimitNOFILE=102642
+
+PermissionsStartOnly=true
+
+ExecStartPre=/opt/jboss/keycloak/bin/keycloak.sh
+
+ExecStartPre=/bin/sh -c "systemctl unset-environment _OPTS"
+
+ExecStartPre=/bin/sh -c "[ -z \"${KEYCLOAK_IMPORT}\" ] && OPTS= || \
+ OPTS=-Dkeycloak.import=${KEYCLOAK_IMPORT}; [ $? -eq 0 ] \
+ && systemctl set-environment _OPTS=$OPTS || exit 1"
+
+ExecStart=/opt/jboss/keycloak/bin/standalone.sh -Dkeycloak.bind.address=0.0.0.0 -Dkeycloak.bind.private.address=0.0.0.0 $_OPTS
+
+ExecStartPost=/bin/sh -c "systemctl unset-environment _OPTS"
+
+[Install]
+WantedBy=multi-user.target

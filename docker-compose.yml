@@ -1,88 +1,145 @@
-
-# Web application authentication developer setup
+# Kolab application suite developer setup
 #
-# Copyright 2016--2018 Jan Pazdziora
+# Copyright 2015-2019 Kolab Systems AG <contact@kolabsystems.com>
 #
-# Licensed under the Apache License, Version 2.0 (the "License").
 
 version: '2.1'
+networks:
+    kolab:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.16.66.0/24
+                  gateway: 172.16.66.254
+            driver: default
+        name: kolab
+
 services:
     ipa:
+        cap_add:
+            - SYS_TIME
         container_name: kolab_ipa_1
-        image: freeipa/freeipa-server:latest
-        sysctls:
-            - net.ipv6.conf.all.disable_ipv6=0
-        volumes:
-            - ./data/ipa/:/data/:Z
-            - /sys/fs/cgroup:/sys/fs/cgroup:ro
-        tmpfs:
-            - /run
-            - /tmp
-        hostname: ipa.example.local
-        stdin_open: true
-        tty: true
-        stop_signal: RTMIN+3
+        dns:
+            - 172.16.66.1
         healthcheck:
-            test: ldapsearch -x -b "dc=example,dc=local"
+            test: pgrep ipa-server-inst && exit 1 || exit 0
             interval: 10s
             timeout: 5s
             retries: 60
-
-    mysql:
-        container_name: kolab_mariadb_1
-        image: mariadb:latest
-        hostname: mysql.example.local
-        volumes:
-            - ./data/mariadb/:/var/lib/mysql/
-            - /sys/fs/cgroup:/sys/fs/cgroup:ro
-        environment:
-            MYSQL_ROOT_PASSWORD: Welcome2KolabSystems
-            MYSQL_DATABASE: keycloak
-            MYSQL_USER: keycloak
-            MYSQL_PASSWORD: Welcome2KolabSystems
+        hostname: ipa.example.local
+        image: freeipa/freeipa-server:latest
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.1
         ports:
-            - 3306:3306
-        healthcheck:
-            test: mysqladmin --user=root --password=Welcome2KolabSystems ping
-            interval: 2s
-            timeout: 5s
-            retries: 30
-
-    keycloak:
-        container_name: kolab_keycloak_1
-        image: jboss/keycloak:latest
-        hostname: keycloak.example.local
-        volumes:
-            - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
-            - ./data/ssl/:/etc/x509/https/:ro
-        #sysctls:
-            #- net.core.wmem_max=1M
-            #- net.core.rmem_max=25M
-        environment:
-            #DB_VENDOR: h2
-            DB_ADDR: mysql
-            DB_DATABASE: keycloak
-            DB_PASSWORD: Welcome2KolabSystems
-            DB_USER: keycloak
-            DB_VENDOR: mysql
-            KEYCLOAK_IMPORT: /etc/settings/realm.json
-            KEYCLOAK_PASSWORD: Welcome2KolabSystems
-            KEYCLOAK_USER: admin
-        ports:
-            - 8080:8080
-            - 8443:8443
-            - 9990:9990
-        depends_on:
-            ipa:
-                condition: service_healthy
-            mysql:
-                condition: service_healthy
-        links:
-            - ipa:ipa.example.local
-            - mysql:mysql.example.local
+            - "53"
+            - "53/udp"
+            - "80:80"
+            - "88:88"
+            - "88/udp"
+            - "123"
+            - "123/udp"
+            - "389:389"
+            - "443:443"
+            - "646:464"
+            - "464/udp"
+            - "636:636"
+            - "749:749"
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
         tmpfs:
             - /run
             - /tmp
-        stdin_open: true
         tty: true
+        volumes:
+            - ./data/ipa/:/data/:Z
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+    postgres:
+        container_name: kolab_postgres_1
+        dns:
+            - 172.16.66.1
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-keycloak}
+            # Difficult to provide the correct environment variable to keycloak, consider using
+            # build arguments.
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+            POSTGRES_USER: ${DB_USER:-keycloak}
+        healthcheck:
+            test: psql --username=${DB_USER:-keycloak} -l
+            interval: 10s
+            timeout: 5s
+            retries: 60
+        hostname: postgres.example.local
+        image: postgres
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.3
+        ports:
+            - "5432"
         stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        volumes:
+            - ./data/postgres/:/var/lib/postgresql/data/
+
+    keycloak:
+        # Build our own image based on upstream
+        build:
+            args:
+                DB_DATABASE: ${DB_DATABASE:-keycloak}
+                DB_PASSWORD: ${DB_PASSWORD:-password}
+                DB_USER: ${DB_USER:-keycloak}
+            context: ./src/keycloak/
+        cap_add:
+            - SYS_TIME
+        container_name: kolab_keycloak_1
+        domainname: example.local
+        depends_on:
+            ipa:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+        dns:
+            - 172.16.66.1
+        environment:
+            DB_ADDR: postgres
+            DB_DATABASE: keycloak
+            # Difficult to provide the correct environment variable to keycloak, consider using
+            # build arguments.
+            DB_PASSWORD: password
+            DB_SCHEMA: public
+            DB_USER: keycloak
+            DB_VENDOR: POSTGRES
+            JDBC_PARAMS:
+                characterEncoding=UTF-8
+                connectTimeout=30000
+            KEYCLOAK_PASSWORD: Welcome2KolabSystems
+            KEYCLOAK_USER: admin
+        hostname: keycloak
+        links:
+            - ipa:ipa.example.local
+            - postgres:postgres.example.local
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.2
+        ports:
+            - "123"
+            - "123/udp"
+            - "8080:8080"
+            - "8443:8443"
+            - "9990:9990"
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        tmpfs:
+            - /run
+            - /tmp
+        tty: true
+        volumes:
+            - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
+            #- ./data/ssl/:/etc/x509/https/:ro
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
