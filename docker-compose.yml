@@ -15,6 +15,47 @@ networks:
         name: kolab
 
 services:
+    imap:
+        build:
+            args:
+                IPA_PASSWORD: ${KEYCLOAK_PASSWORD:-Welcome2KolabSystems}
+                IPA_USER: ${KEYCLOAK_USER:-admin}
+            context: ./src/imap/
+        container_name: kolab_imap_1
+        domainname: example.local
+        depends_on:
+            ipa:
+                condition: service_healthy
+            keycloak:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+        dns:
+            - 172.16.66.1
+        environment:
+            DB_ADDR: postgres
+            DB_SCHEMA: public
+            DB_VENDOR: POSTGRES
+            JDBC_PARAMS:
+                characterEncoding=UTF-8
+                connectTimeout=30000
+        hostname: imap
+        links:
+            - ipa:ipa.example.local
+            - keycloak:keycloak.example.local
+            - postgres:postgres.example.local
+        networks:
+            - kolab
+        ports:
+            - "443"
+            - "993:993"
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        volumes:
+            - ./data/imap/:/srv/imap
+
     ipa:
         cap_add:
             - SYS_TIME
@@ -143,44 +184,3 @@ services:
             - net.ipv6.conf.all.disable_ipv6=0
         volumes:
             - ./data/postgres/:/var/lib/postgresql/data/
-
-    imap:
-        build:
-            args:
-                IPA_PASSWORD: ${KEYCLOAK_PASSWORD:-Welcome2KolabSystems}
-                IPA_USER: ${KEYCLOAK_USER:-admin}
-            context: ./src/imap/
-        container_name: kolab_imap_1
-        domainname: example.local
-        depends_on:
-            ipa:
-                condition: service_healthy
-            keycloak:
-                condition: service_healthy
-            postgres:
-                condition: service_healthy
-        dns:
-            - 172.16.66.1
-        environment:
-            DB_ADDR: postgres
-            DB_SCHEMA: public
-            DB_VENDOR: POSTGRES
-            JDBC_PARAMS:
-                characterEncoding=UTF-8
-                connectTimeout=30000
-        hostname: imap
-        links:
-            - ipa:ipa.example.local
-            - keycloak:keycloak.example.local
-            - postgres:postgres.example.local
-        networks:
-            - kolab
-        ports:
-            - "443"
-            - "993:993"
-        stdin_open: true
-        stop_signal: RTMIN+3
-        sysctls:
-            - net.ipv6.conf.all.disable_ipv6=0
-        volumes:
-            - ./data/imap/:/srv/imap
