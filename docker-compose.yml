@@ -57,6 +57,65 @@ services:
             - ./data/ipa/:/data/:Z
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
+    keycloak:
+        # Build our own image based on upstream
+        build:
+            args:
+                DB_DATABASE: ${DB_DATABASE:-keycloak}
+                DB_PASSWORD: ${DB_PASSWORD:-password}
+                DB_USER: ${DB_USER:-keycloak}
+                KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-Welcome2KolabSystems}
+                KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
+            context: ./src/keycloak/
+        cap_add:
+            - SYS_TIME
+        container_name: kolab_keycloak_1
+        domainname: example.local
+        depends_on:
+            ipa:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+        dns:
+            - 172.16.66.1
+        environment:
+            DB_ADDR: postgres
+            DB_SCHEMA: public
+            DB_VENDOR: POSTGRES
+            JDBC_PARAMS:
+                characterEncoding=UTF-8
+                connectTimeout=30000
+        healthcheck:
+            test: netstat -tlnp | grep -q :8443
+            interval: 10s
+            timeout: 5s
+            retries: 12
+        hostname: keycloak
+        links:
+            - ipa:ipa.example.local
+            - postgres:postgres.example.local
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.2
+        ports:
+            - "123"
+            - "123/udp"
+            - "8080:8080"
+            - "8443:8443"
+            - "9990:9990"
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        tmpfs:
+            - /run
+            - /tmp
+        tty: true
+        volumes:
+            - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
+            #- ./data/ssl/:/etc/x509/https/:ro
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
     postgres:
         container_name: kolab_postgres_1
         dns:
@@ -85,20 +144,18 @@ services:
         volumes:
             - ./data/postgres/:/var/lib/postgresql/data/
 
-    keycloak:
-        # Build our own image based on upstream
+    imap:
         build:
             args:
-                DB_DATABASE: ${DB_DATABASE:-keycloak}
-                DB_PASSWORD: ${DB_PASSWORD:-password}
-                DB_USER: ${DB_USER:-keycloak}
-            context: ./src/keycloak/
-        cap_add:
-            - SYS_TIME
-        container_name: kolab_keycloak_1
+                IPA_PASSWORD: ${KEYCLOAK_PASSWORD:-Welcome2KolabSystems}
+                IPA_USER: ${KEYCLOAK_USER:-admin}
+            context: ./src/imap/
+        container_name: kolab_imap_1
         domainname: example.local
         depends_on:
             ipa:
+                condition: service_healthy
+            keycloak:
                 condition: service_healthy
             postgres:
                 condition: service_healthy
@@ -106,40 +163,24 @@ services:
             - 172.16.66.1
         environment:
             DB_ADDR: postgres
-            DB_DATABASE: keycloak
-            # Difficult to provide the correct environment variable to keycloak, consider using
-            # build arguments.
-            DB_PASSWORD: password
             DB_SCHEMA: public
-            DB_USER: keycloak
             DB_VENDOR: POSTGRES
             JDBC_PARAMS:
                 characterEncoding=UTF-8
                 connectTimeout=30000
-            KEYCLOAK_PASSWORD: Welcome2KolabSystems
-            KEYCLOAK_USER: admin
-        hostname: keycloak
+        hostname: imap
         links:
             - ipa:ipa.example.local
+            - keycloak:keycloak.example.local
             - postgres:postgres.example.local
         networks:
-            kolab:
-                ipv4_address: 172.16.66.2
+            - kolab
         ports:
-            - "123"
-            - "123/udp"
-            - "8080:8080"
-            - "8443:8443"
-            - "9990:9990"
+            - "443"
+            - "993:993"
         stdin_open: true
         stop_signal: RTMIN+3
         sysctls:
             - net.ipv6.conf.all.disable_ipv6=0
-        tmpfs:
-            - /run
-            - /tmp
-        tty: true
         volumes:
-            - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
-            #- ./data/ssl/:/etc/x509/https/:ro
-            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+            - ./data/imap/:/srv/imap
