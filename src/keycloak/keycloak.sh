@@ -60,6 +60,8 @@ if [ ! -f "/opt/jboss/keycloak/standalone/data/admin.created" ]; then
                 --user ${KEYCLOAK_USER} \
                 --password "${KEYCLOAK_PASSWORD}"
 
+            sed -i -e '/^KEYCLOAK_/d' /etc/sysconfig/keycloak
+
             touch /opt/jboss/keycloak/standalone/data/admin.created
         fi
     fi
@@ -70,3 +72,5 @@ chown -R jboss:jboss /opt/jboss/keycloak/
 ipa-client-install --mkhomedir --principal admin --password Welcome2KolabSystems --force-join --unattended || :
 
 /opt/jboss/keycloak/bin/federation-sssd-setup.sh
+
+sed -r -i -e 's/^allowed_uids.*$/allowed_uids = root, jboss/g' /etc/sssd/sssd.conf
