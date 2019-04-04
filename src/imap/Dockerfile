@@ -13,6 +13,8 @@ RUN yum -y install \
         cyrus-imapd \
         cyrus-sasl \
         freeipa-client \
+        iproute \
+        iputils \
         lsof \
         openssl \
         net-tools \
@@ -33,21 +35,27 @@ RUN usermod -d /usr/libexec/cyrus-imapd cyrus
 RUN rm -rf /var/lib/imap /var/spool/imap
 
 ADD cyrus-imapd-init.sh /usr/local/sbin/cyrus-imapd-init.sh
-RUN chmod u+x /usr/local/sbin/cyrus-imapd-init.sh
+RUN chmod 750 /usr/local/sbin/cyrus-imapd-init.sh
 
 ARG IPA_PASSWORD=Welcome2KolabSystems
-ARG IPA_REALM=example.local
 ARG IPA_USER=admin
 
 EXPOSE 443 993
 
 ADD freeipa-join.service /etc/systemd/system/freeipa-join.service
+ADD freeipa-join.sh /usr/local/sbin/freeipa-join.sh
+RUN chmod 750 /usr/local/sbin/freeipa-join.sh
+
 RUN mkdir /etc/systemd/system/cyrus-imapd.service.d/
 ADD ExecStartPre.conf /etc/systemd/system/cyrus-imapd.service.d/
+
+RUN echo "IPA_PASSWORD=$IPA_PASSWORD" >> /etc/sysconfig/freeipa
+RUN echo "IPA_USER=$IPA_USER" >> /etc/sysconfig/freeipa
 
 RUN systemctl enable cyrus-imapd
 RUN systemctl enable freeipa-join
 RUN systemctl enable saslauthd
 
+RUN ln -sf /bin/true /usr/libexec/hostname/nis-domainname
 
 ENTRYPOINT [ "/lib/systemd/systemd" ]
