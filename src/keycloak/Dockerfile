@@ -42,6 +42,7 @@ RUN yum -y install \
         freeipa-client \
         git \
         iproute \
+        iputils \
         java-1.8.0-openjdk-devel \
         jna \
         jq \
