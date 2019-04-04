@@ -30,7 +30,7 @@ ExecStartPre=/bin/sh -c "[ -z \"${KEYCLOAK_IMPORT}\" ] && OPTS= || \
  OPTS=-Dkeycloak.import=${KEYCLOAK_IMPORT}; [ $? -eq 0 ] \
  && systemctl set-environment _OPTS=$OPTS || exit 1"
 
-ExecStart=/opt/jboss/keycloak/bin/standalone.sh -Dkeycloak.bind.address=0.0.0.0 -Dkeycloak.bind.private.address=0.0.0.0 $_OPTS
+ExecStart=/opt/jboss/keycloak/bin/standalone.sh -Djboss.bind.address=0.0.0.0 -Djboss.bind.private.address=0.0.0.0 $_OPTS
 
 ExecStartPost=/bin/sh -c "systemctl unset-environment _OPTS"
 
