@@ -12,13 +12,16 @@ RUN yum -y install \
         bind-utils \
         cyrus-imapd \
         cyrus-sasl \
+        cyrus-sasl-plain \
         freeipa-client \
         iproute \
         iputils \
+        jq \
         lsof \
         openssl \
         net-tools \
         psmisc \
+        python3-jwt \
         strace \
         telnet \
         traceroute \
@@ -29,6 +32,8 @@ RUN yum -y install \
 RUN sed -r -i \
     -e 's|^configdirectory:.*$|configdirectory: /srv/imap/config/|g' \
     -e 's|^partition-default:.*$|partition-default: /srv/imap/spool/default/|g' \
+    -e 's|^sievedir:.*$|sievedir: /srv/imap/config/sieve|g' \
+    -e 's|^allowplaintext:.*$|allowplaintext: no|g' \
     /etc/imapd.conf
 
 RUN usermod -d /usr/libexec/cyrus-imapd cyrus
@@ -46,6 +51,10 @@ ADD freeipa-join.service /etc/systemd/system/freeipa-join.service
 ADD freeipa-join.sh /usr/local/sbin/freeipa-join.sh
 RUN chmod 750 /usr/local/sbin/freeipa-join.sh
 
+ADD kolab-saslauthd.service /etc/systemd/system/kolab-saslauthd.service
+ADD kolab-saslauthd.py /usr/local/sbin/kolab-saslauthd
+RUN chmod 750 /usr/local/sbin/kolab-saslauthd
+
 RUN mkdir /etc/systemd/system/cyrus-imapd.service.d/
 ADD ExecStartPre.conf /etc/systemd/system/cyrus-imapd.service.d/
 
@@ -54,7 +63,9 @@ RUN echo "IPA_USER=$IPA_USER" >> /etc/sysconfig/freeipa
 
 RUN systemctl enable cyrus-imapd
 RUN systemctl enable freeipa-join
-RUN systemctl enable saslauthd
+RUN systemctl enable kolab-saslauthd
+
+# RUN systemctl enable saslauthd
 
 RUN ln -sf /bin/true /usr/libexec/hostname/nis-domainname
 

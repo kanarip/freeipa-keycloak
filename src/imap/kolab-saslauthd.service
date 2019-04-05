@@ -1,0 +1,12 @@
+[Unit]
+Description=The Kolab SASL Authentication Daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/sbin/kolab-saslauthd
+
+[Install]
+WantedBy=multi-user.target

@@ -15,6 +15,90 @@ networks:
         name: kolab
 
 services:
+    api:
+        build:
+            context: ./src/api/
+        container_name: kolab_api_1
+        domainname: example.local
+        depends_on:
+            imap:
+                condition: service_healthy
+            ipa:
+                condition: service_healthy
+            keycloak:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+        dns:
+            - 172.16.66.1
+        hostname: api
+        links:
+            - ipa:ipa.example.local
+            - keycloak:keycloak.example.local
+            - imap:imap.example.local
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.5
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        tmpfs:
+            - /run
+            - /tmp
+        tty: true
+        volumes:
+            - ./data/api/:/usr/local/apache2/htdocs/:Z
+            - ./data/ssl/tls.crt:/usr/local/apache2/conf/server.crt:ro
+            - ./data/ssl/tls.key:/usr/local/apache2/conf/server.key:ro
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+    cdn:
+        build:
+            context: ./src/api/
+        container_name: kolab_cdn_1
+        domainname: example.local
+        hostname: cdn
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.6
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        tmpfs:
+            - /run
+            - /tmp
+        tty: true
+        volumes:
+            - ./data/cdn/:/usr/local/apache2/htdocs/:Z
+            - ./data/ssl/tls.crt:/usr/local/apache2/conf/server.crt:ro
+            - ./data/ssl/tls.key:/usr/local/apache2/conf/server.key:ro
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+    demo:
+        build:
+            context: ./src/demo/
+        container_name: kolab_demo_1
+        domainname: example.local
+        hostname: demo
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.7
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        tmpfs:
+            - /run
+            - /tmp
+        tty: true
+        volumes:
+            - ./data/demo/:/usr/local/apache2/htdocs/:Z
+            - ./data/ssl/tls.crt:/usr/local/apache2/conf/server.crt:ro
+            - ./data/ssl/tls.key:/usr/local/apache2/conf/server.key:ro
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
     imap:
         build:
             args:
@@ -39,22 +123,25 @@ services:
             JDBC_PARAMS:
                 characterEncoding=UTF-8
                 connectTimeout=30000
+        healthcheck:
+            test: systemctl is-active cyrus-imapd
+            interval: 10s
+            timeout: 5s
+            retries: 12
         hostname: imap
         links:
             - ipa:ipa.example.local
             - keycloak:keycloak.example.local
             - postgres:postgres.example.local
         networks:
-            - kolab
-        ports:
-            - "443"
-            - "993:993"
+            kolab:
+                ipv4_address: 172.16.66.4
         stdin_open: true
         stop_signal: RTMIN+3
         sysctls:
             - net.ipv6.conf.all.disable_ipv6=0
         volumes:
-            - ./data/imap/:/srv/imap
+            - ./data/imap/:/srv/imap/
 
     ipa:
         cap_add:
@@ -72,20 +159,6 @@ services:
         networks:
             kolab:
                 ipv4_address: 172.16.66.1
-        ports:
-            - "53"
-            - "53/udp"
-            - "80:80"
-            - "88:88"
-            - "88/udp"
-            - "123"
-            - "123/udp"
-            - "389:389"
-            - "443:443"
-            - "646:464"
-            - "464/udp"
-            - "636:636"
-            - "749:749"
         stdin_open: true
         stop_signal: RTMIN+3
         sysctls:
@@ -138,12 +211,6 @@ services:
         networks:
             kolab:
                 ipv4_address: 172.16.66.2
-        ports:
-            - "123"
-            - "123/udp"
-            - "8080:8080"
-            - "8443:8443"
-            - "9990:9990"
         stdin_open: true
         stop_signal: RTMIN+3
         sysctls:
@@ -154,7 +221,7 @@ services:
         tty: true
         volumes:
             - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
-            #- ./data/ssl/:/etc/x509/https/:ro
+            - ./data/ssl/:/etc/x509/https/:ro
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
     postgres:
@@ -177,8 +244,6 @@ services:
         networks:
             kolab:
                 ipv4_address: 172.16.66.3
-        ports:
-            - "5432"
         stop_signal: RTMIN+3
         sysctls:
             - net.ipv6.conf.all.disable_ipv6=0

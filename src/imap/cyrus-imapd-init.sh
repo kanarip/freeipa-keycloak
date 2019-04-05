@@ -6,6 +6,8 @@ mkdir -p /srv/imap/partition/default/
 chown -R cyrus:mail /srv/imap/config/
 chown -R cyrus:mail /srv/imap/partition/default/
 
+chown -R cyrus /etc/pki/cyrus-imapd
+
 su -s /bin/bash - cyrus -c '/usr/libexec/cyrus-imapd/mkimap'
 
 cd /srv/imap/
