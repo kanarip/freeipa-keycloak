@@ -48,9 +48,10 @@ services:
             - /tmp
         tty: true
         volumes:
-            - ./data/api/:/usr/local/apache2/htdocs/:Z
-            - ./data/ssl/tls.crt:/usr/local/apache2/conf/server.crt:ro
-            - ./data/ssl/tls.key:/usr/local/apache2/conf/server.key:ro
+            - ./data/api/:/data/api/:Z
+            - ./data/ssl/certs/api.cert:/data/api/api.cert:Z
+            - ./data/ssl/certs/api.key:/data/api/api.key:Z
+            - ./data/ssl/ca.cert:/data/api/ca.cert:Z
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
     cdn:
@@ -72,14 +73,19 @@ services:
         tty: true
         volumes:
             - ./data/cdn/:/usr/local/apache2/htdocs/:Z
-            - ./data/ssl/tls.crt:/usr/local/apache2/conf/server.crt:ro
-            - ./data/ssl/tls.key:/usr/local/apache2/conf/server.key:ro
+            - ./data/ssl/certs/cdn.cert:/usr/local/apache2/conf/server.crt:ro
+            - ./data/ssl/certs/cdn.key:/usr/local/apache2/conf/server.key:ro
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
     demo:
         build:
             context: ./src/demo/
         container_name: kolab_demo_1
+        depends_on:
+            ipa:
+                condition: service_healthy
+            keycloak:
+                condition: service_healthy
         domainname: example.local
         hostname: demo
         networks:
@@ -95,8 +101,8 @@ services:
         tty: true
         volumes:
             - ./data/demo/:/usr/local/apache2/htdocs/:Z
-            - ./data/ssl/tls.crt:/usr/local/apache2/conf/server.crt:ro
-            - ./data/ssl/tls.key:/usr/local/apache2/conf/server.key:ro
+            - ./data/ssl/certs/demo.cert:/usr/local/apache2/conf/server.crt:ro
+            - ./data/ssl/certs/demo.key:/usr/local/apache2/conf/server.key:ro
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
     imap:
@@ -178,6 +184,7 @@ services:
                 DB_DATABASE: ${DB_DATABASE:-keycloak}
                 DB_PASSWORD: ${DB_PASSWORD:-password}
                 DB_USER: ${DB_USER:-keycloak}
+                KEYCLOAK_IMPORT: ${KEYCLOAK_IMPORT:-/etc/keycloak/realm-example.local.json}
                 KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD:-Welcome2KolabSystems}
                 KEYCLOAK_USER: ${KEYCLOAK_USER:-admin}
             context: ./src/keycloak/
@@ -221,7 +228,9 @@ services:
         tty: true
         volumes:
             - ./data/keycloak/:/opt/jboss/keycloak/standalone/data/
-            - ./data/ssl/:/etc/x509/https/:ro
+            - ./data/ssl/certs/keycloak.cert:/etc/x509/https/tls.crt:ro
+            - ./data/ssl/certs/keycloak.key:/etc/x509/https/tls.key:ro
+            - ./src/keycloak/:/etc/keycloak/
             - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
     postgres:

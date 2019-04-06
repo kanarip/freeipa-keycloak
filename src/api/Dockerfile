@@ -1,11 +1,8 @@
-FROM httpd:2.4
+FROM fedora:30
 
-RUN sed -i \
-        -e 's/^#\(Include .*httpd-ssl.conf\)/\1/' \
-        -e 's/^#\(LoadModule .*mod_ssl.so\)/\1/' \
-        -e 's/^#\(LoadModule .*mod_socache_shmcb.so\)/\1/' \
-        conf/httpd.conf
+RUN yum -y install \
+        python3-aiohttp \
+        python3-jwt && \
+    yum clean all
 
-RUN echo "SetEnvIf Origin \"http(s)?://(.*)\$\" AccessControlAllowOrigin=\$0" >> conf/httpd.conf
-RUN echo "Header always set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin" >> conf/httpd.conf
-RUN echo "Header always set Access-Control-Allow-Headers \"authorization\"" >> conf/httpd.conf
+ENTRYPOINT [ "/usr/bin/python3", "/data/api/api.py" ]

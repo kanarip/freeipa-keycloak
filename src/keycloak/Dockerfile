@@ -101,6 +101,7 @@ ARG GIT_BRANCH
 ARG KEYCLOAK_DIST=https://downloads.jboss.org/keycloak/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.tar.gz
 
 ARG KEYCLOAK_PASSWORD=Welcome2KolabSystems
+ARG KEYCLOAK_IMPORT=/etc/keycloak/realm-example.local.json
 ARG KEYCLOAK_USER=admin
 
 RUN /opt/jboss/tools/build-keycloak.sh
@@ -110,6 +111,7 @@ RUN echo "DB_DATABASE=$DB_DATABASE" >> /etc/sysconfig/keycloak
 RUN echo "DB_PASSWORD=$DB_PASSWORD" >> /etc/sysconfig/keycloak
 RUN echo "DB_USER=$DB_USER" >> /etc/sysconfig/keycloak
 RUN echo "DB_VENDOR=POSTGRES" >> /etc/sysconfig/keycloak
+RUN echo "KEYCLOAK_IMPORT=$KEYCLOAK_IMPORT" >> /etc/sysconfig/keycloak
 RUN echo "KEYCLOAK_PASSWORD=$KEYCLOAK_PASSWORD" >> /etc/sysconfig/keycloak
 RUN echo "KEYCLOAK_USER=$KEYCLOAK_USER" >> /etc/sysconfig/keycloak
 

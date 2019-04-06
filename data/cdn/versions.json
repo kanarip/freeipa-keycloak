@@ -1,0 +1,10 @@
+{
+    "app": {
+        "version": "0.0.0",
+        "url": "https://cdn.kolab.io/app.js"
+    },
+    "jquery": {
+        "version": "3.3.0",
+        "url": "https://cdn.kolab.io/jquery-3.3.0.js"
+    }
+}
