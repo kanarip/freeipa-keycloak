@@ -1,0 +1,55 @@
+#!/bin/bash
+
+base_dir=$(dirname $(dirname $0))
+
+if [ ! -d "${base_dir}/certs" ]; then
+    mkdir -p ${base_dir}/certs
+fi
+
+if [ ! -f "${base_dir}/ca.key" ]; then
+    openssl genrsa -out ${base_dir}/ca.key 4096
+
+    openssl req \
+        -new \
+        -x509 \
+        -nodes \
+        -days 3650 \
+        -key ${base_dir}/ca.key \
+        -out ${base_dir}/ca.cert \
+        -subj '/O=Example CA/'
+fi
+
+if [ -f /etc/pki/tls/openssl.cnf ]; then
+    openssl_cnf="/etc/pki/tls/openssl.cnf"
+elif [ -f /etc/ssl/openssl.cnf ]; then
+    openssl_cnf="/etc/ssl/openssl.cnf"
+else
+    echo "No openssl.cnf"
+    exit 1
+fi
+
+for name in api cdn demo keycloak imap; do
+    openssl genrsa -out ${base_dir}/certs/${name}.key 4096
+
+    openssl req \
+        -new \
+        -key ${base_dir}/certs/${name}.key \
+        -out ${base_dir}/certs/${name}.csr \
+        -subj "/O=Example CA/CN=${name}/" \
+        -reqexts SAN \
+        -config <(cat ${openssl_cnf} \
+            <(printf "[SAN]\nsubjectAltName=DNS:${name}.example.local"))
+
+    openssl x509 \
+        -req \
+        -in ${base_dir}/certs/${name}.csr \
+        -CA ${base_dir}/ca.cert \
+        -CAkey ${base_dir}/ca.key \
+        -CAcreateserial \
+        -out ${base_dir}/certs/${name}.cert \
+        -days 28 \
+        -extfile <(cat ${openssl_cnf} \
+            <(printf "[SAN]\nsubjectAltName=DNS:${name}.example.local")) \
+        -extensions SAN
+
+done
