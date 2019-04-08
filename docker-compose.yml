@@ -56,7 +56,7 @@ services:
 
     cdn:
         build:
-            context: ./src/api/
+            context: ./src/cdn/
         container_name: kolab_cdn_1
         domainname: example.local
         hostname: cdn
