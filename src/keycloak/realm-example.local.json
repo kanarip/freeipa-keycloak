@@ -898,7 +898,7 @@
               "subComponents": {},
               "config": {
                 "ldap.attribute": [
-                  "cn"
+                  "givenName"
                 ],
                 "is.mandatory.in.ldap": [
                   "true"
