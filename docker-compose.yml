@@ -31,6 +31,11 @@ services:
                 condition: service_healthy
         dns:
             - 172.16.66.1
+        healthcheck:
+            test: netstat -tlnp | grep -q :443
+            interval: 10s
+            timeout: 5s
+            retries: 12
         hostname: api
         links:
             - ipa:ipa.example.local
@@ -258,3 +263,42 @@ services:
             - net.ipv6.conf.all.disable_ipv6=0
         volumes:
             - ./data/postgres/:/var/lib/postgresql/data/
+
+    test:
+        build:
+            context: ./src/test/
+        container_name: kolab_test_1
+        domainname: example.local
+        depends_on:
+            api:
+                condition: service_healthy
+            demo:
+                condition: service_healthy
+            ipa:
+                condition: service_healthy
+            keycloak:
+                condition: service_healthy
+            postgres:
+                condition: service_healthy
+        dns:
+            - 172.16.66.1
+        hostname: test
+        links:
+            - api:api.example.local
+            - demo:demo.example.local
+            - ipa:ipa.example.local
+            - keycloak:keycloak.example.local
+        networks:
+            kolab:
+                ipv4_address: 172.16.66.5
+        stdin_open: true
+        stop_signal: RTMIN+3
+        sysctls:
+            - net.ipv6.conf.all.disable_ipv6=0
+        tmpfs:
+            - /run
+            - /tmp
+        tty: true
+        volumes:
+            - ./src/test/:/data/test/:Z
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
