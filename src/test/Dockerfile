@@ -17,7 +17,7 @@ RUN dnf -y install \
         cyrus-imapd \
         cyrus-sasl-plain \
         firefox \
-        git \
+        freeipa-client \
         iproute \
         iputils \
         lsof \
@@ -26,10 +26,12 @@ RUN dnf -y install \
         openldap-clients \
         openssl \
         psmisc \
+        python3-aiohttp \
+        python3-aiohttp-cors \
+        python3-aiohttp-negotiate \
         python3-jwt \
         python3-pip \
-        procps-ng \
-        psmisc \
+        python3-pytest \
         strace \
         telnet \
         traceroute \
@@ -39,13 +41,7 @@ RUN dnf -y install \
         which && \
     dnf clean all
 
-RUN pip3 install quart quart-openapi
-
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV QUART_APP api:main
-ENV QUART_DEBUG 1
 
-WORKDIR /data/api/
-
-ENTRYPOINT [ "/usr/local/bin/quart", "run", "/data/api/api.py" ]
+ENTRYPOINT [ "/bin/bash", "/data/test/test.sh" ]

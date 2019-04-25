@@ -7,7 +7,11 @@ LABEL maintainer="Jeroen van Meeuwen (Kolab Systems) <vanmeeuwen@kolabsys.com>"
 ENV container docker
 ENV SYSTEMD_PAGER=''
 
-RUN yum -y install \
+RUN echo "zchunk=False" >> /etc/dnf/dnf.conf
+RUN dnf -y update librepo && \
+    dnf clean all
+
+RUN dnf -y install \
         augeas \
         bind-utils \
         cyrus-imapd \
@@ -27,7 +31,7 @@ RUN yum -y install \
         traceroute \
         vim-enhanced \
         wget && \
-    yum clean all
+    dnf clean all
 
 RUN sed -r -i \
     -e 's|^configdirectory:.*$|configdirectory: /srv/imap/config/|g' \
