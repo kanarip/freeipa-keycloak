@@ -3,6 +3,13 @@
 Uses FreeIPA and Keycloak with an IMAP server that validates bearer tokens with some in-browser JS
 against some Python 3 API (currently aiohttp)
 
+Make sure to;
+
+```
+$ git submodule init
+$ git submodule update
+```
+
 - Regenerate some SSL certificates
 
 ```
@@ -30,3 +37,16 @@ $ docker-compose up [-d]
 Your FreeIPA admin interface should be on https://ipa.example.local/
 
 Your Keycloak admin interface should be on https://keycloak.example.local:8443/
+
+## Do It All Again
+
+Lather, rinse and repeat;
+
+```
+$ docker-compose down
+$ docker-compose rm -f
+$ sudo git clean -d -f -x
+$ data/ssl/bin/regen
+$ docker-compose build
+$ docker-compose up
+```
