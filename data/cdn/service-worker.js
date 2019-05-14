@@ -1,3 +1,4 @@
+"use strict";
 // https://deanhume.com/displaying-a-new-version-available-progressive-web-app/
 
 // cache names from version.json?
@@ -18,10 +19,10 @@ self.addEventListener('install',
 );
 
 self.addEventListener('fetch',
-    function (event) {
+    event => {
         event.respondWith(
             caches.match(event.request).then(
-                function (response) {
+                response => {
                     if (response) {
                         return response;
                     }

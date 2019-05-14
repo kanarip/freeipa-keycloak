@@ -1,43 +1,37 @@
+"use strict";
+
 let d = new Date();
 
 // should have theme
-function load_css(url, callback) {
-    var head = document.head;
+let load_css = (url, callback) => {
     var link = document.createElement('link');
 
     link.rel = 'stylesheet';
     link.type = 'text/css';
     link.href = url;
     link.media = 'all';
-    link.onreadystagechange = callback;
     link.onload = callback;
 
-    head.appendChild(link);
+    document.head.appendChild(link);
 }
 
-function load_script(url, callback) {
+let load_script = (url, callback) => {
     // Adding the script tag to the head as suggested before
-    var head = document.head;
-    var script = document.createElement('script');
+    let script = document.createElement('script');
     script.type = 'text/javascript';
     script.src = url;
-
-    // Then bind the event to the callback function.
-    // There are several events for cross browser compatibility.
-    script.onreadystatechange = callback;
     script.onload = callback;
 
     // Fire the loading
-    head.appendChild(script);
+    document.head.appendChild(script);
 }
 
-var initialize = function() {
-    document.body.innerHTML = "<p>Today's date is " + d + "</p>";
-    document.body.innerHTML += "<p>Timezone: " + Intl.DateTimeFormat().resolvedOptions().timeZone + "</p>";
-    document.body.innerHTML += "<p>Language: " + window.navigator.language + "</p>";
-
-    // This should probably be the one to use, because we can iterate over languages until one is available.
-    document.body.innerHTML += "<p>Language(s): " + window.navigator.languages + "</p>";
+let initialize = function() {
+    document.body.innerHTML = "<p>Today's date is " + d + "</p>"
+        + "<p>Timezone: " + Intl.DateTimeFormat().resolvedOptions().timeZone + "</p>"
+        + "<p>Language: " + window.navigator.language + "</p>"
+        // This should probably be the one to use, because we can iterate over languages until one is available.
+        + "<p>Language(s): " + window.navigator.languages + "</p>";
 
     $(document).ready(
         function() {
@@ -48,34 +42,28 @@ var initialize = function() {
     );
 }
 
-var start_keycloak = function() {
+let start_keycloak = () => {
     console.log('loading!');
-    $(document).ready(
-        function() {
+    $(document).ready(() => {
             console.log('loading for realz!');
             var username = $('input[name="username"]').val();
             var realm = username.split("@")[1];
             var server = 'api.' + realm;
             var resource = location.hostname;
 
-            var keycloak = Keycloak(
-                {
-                    // A keycloak container
-                    url: 'https://keycloak.example.local:8443/auth/',
-                    realm: realm,
-                    clientId: resource
-                }
-            );
+            var keycloak = Keycloak({
+                // A keycloak container
+                url: 'https://keycloak.example.local:8443/auth/',
+                realm: realm,
+                clientId: resource
+            });
 
-            keycloak.init(
-                { onLoad: 'login-required' }
-            ).success(
-                function(authenticated) {
+            keycloak.init({onLoad: 'login-required'})
+                .success(authenticated => {
                     document.body.innerHTML += "<p>" + (authenticated ? 'authenticated' : 'not authenticated') + "</p>";
-                }
-            );
+                });
 
-            keycloak.onAuthSuccess = function() {
+            keycloak.onAuthSuccess = () => {
                 var url = 'https://' + server + '/' + username;
 
                 console.log('url: ' + url);
@@ -85,15 +73,14 @@ var start_keycloak = function() {
                 var req = new XMLHttpRequest();
 
                 req.open('GET', url, true);
-
                 req.setRequestHeader('Accept', 'application/json');
                 req.setRequestHeader('Authorization', 'Bearer ' + keycloak.token);
-
-                req.onreadystatechange = function () {
+                req.onreadystatechange = () => {
                     if (req.readyState == 4) {
                         if (req.status == 200) {
                             document.body.innerHTML += "<pre>" + JSON.stringify(JSON.parse(req.responseText), undefined, 4) + "</pre>";
-                        } else if (req.status == 403) {
+                        }
+                        else if (req.status == 403) {
                             alert('Forbidden');
                         }
                     }
@@ -101,27 +88,27 @@ var start_keycloak = function() {
 
                 req.send();
 
-                document.body.innerHTML += "<p>Subject: " + keycloak.subject + "</p>";
-                document.body.innerHTML += "<p>Name: " + keycloak.idTokenParsed.name + "</p>";
-                document.body.innerHTML += "<p>Given name: " + keycloak.idTokenParsed.given_name + "</p>";
-                document.body.innerHTML += "<p>Preferred username: " + keycloak.idTokenParsed.preferred_username + "</p>";
-                document.body.innerHTML += "<p>Email address: " + keycloak.idTokenParsed.email + "</p>";
+                document.body.innerHTML += "<p>Subject: " + keycloak.subject + "</p>"
+                    + "<p>Name: " + keycloak.idTokenParsed.name + "</p>"
+                    + "<p>Given name: " + keycloak.idTokenParsed.given_name + "</p>"
+                    + "<p>Preferred username: " + keycloak.idTokenParsed.preferred_username + "</p>"
+                    + "<p>Email address: " + keycloak.idTokenParsed.email + "</p>";
 
                 keycloak.loadUserProfile(
-                    function() {
-                        document.body.innerHTML += "<p>Account Service</p>";
-                        document.body.innerHTML += "<p>username: " + keycloak.profile.username + "</p>";
-                        document.body.innerHTML += "<p>email: " + keycloak.profile.email + "</p>";
-                        document.body.innerHTML += "<p>firstname + lastname: " + keycloak.profile.firstName + ' ' + keycloak.profile.lastName + "</p>";
-                        document.body.innerHTML += "<p>firstname: " + keycloak.profile.firstName + "</p>";
-                        document.body.innerHTML += "<p>lastname: " + keycloak.profile.lastName + "</p>";
-                    }, function() {
+                    () => {
+                        document.body.innerHTML += "<p>Account Service</p>"
+                            + "<p>username: " + keycloak.profile.username + "</p>"
+                            + "<p>email: " + keycloak.profile.email + "</p>"
+                            + "<p>firstname + lastname: " + keycloak.profile.firstName + ' ' + keycloak.profile.lastName + "</p>"
+                            + "<p>firstname: " + keycloak.profile.firstName + "</p>"
+                            + "<p>lastname: " + keycloak.profile.lastName + "</p>";
+                    },
+                    () => {
                         document.body.innerHTML += "<p>Failed to retrieve user details. Please enable claims or account role</p>";
                     }
                 );
             }
-        }
-    );
+        });
 }
 
 load_css('https://cdn.example.local/spinner.css');
