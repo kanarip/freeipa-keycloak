@@ -2,11 +2,11 @@
 
 const version = '0.0.1';
 const cacheName = 'kolab4-v' + version;
-const path = 'https://demo.example.local';
+const path = 'https://cdn.example.local';
 const prefetch = [
-   path,
-   path + '/jquery.js',
-   path + '/app.js'
+    path,
+    path + '/jquery.js',
+    path + '/app.js'
 ];
 
 /*
@@ -17,6 +17,7 @@ self.addEventListener('install', event => {
 
     event.waitUntil(
         caches.open(cacheName).then(cache => {
+            console.log('[Service Worker] Cache Name: ' + cacheName);
             // FIXME: Will that fetch files from the old cache?
             // TODO: I guess we should cache resources using per-resource version
             //       not per-service-worker version, so a resource that didn't

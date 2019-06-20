@@ -2,9 +2,11 @@
 
 let d = new Date();
 
+const cdn = 'https://cdn.example.local';
+
 // should have theme
 let load_css = (url, callback) => {
-    var link = document.createElement('link');
+    let link = document.createElement('link');
 
     link.rel = 'stylesheet';
     link.type = 'text/css';
@@ -26,20 +28,18 @@ let load_script = (url, callback) => {
     document.head.appendChild(script);
 }
 
-let initialize = function() {
+let initialize = () => {
     document.body.innerHTML = "<p>Today's date is " + d + "</p>"
         + "<p>Timezone: " + Intl.DateTimeFormat().resolvedOptions().timeZone + "</p>"
         + "<p>Language: " + window.navigator.language + "</p>"
         // This should probably be the one to use, because we can iterate over languages until one is available.
         + "<p>Language(s): " + window.navigator.languages + "</p>";
 
-    $(document).ready(
-        function() {
-            document.body.innerHTML += "<table><tr><th>And you are?</th></tr><tr><td><input type='text' name='username' value='jeroen@example.local'></td></tr></table>";
+    $(document).ready(() => {
+        document.body.innerHTML += "<table><tr><th>And you are?</th></tr><tr><td><input type='text' name='username' value=''></td></tr></table>";
 
-            load_script('https://keycloak.example.local:8443/auth/js/keycloak.js', start_keycloak);
-        }
-    );
+        load_script('https://keycloak.example.local:8443/auth/js/keycloak.js', start_keycloak);
+    });
 }
 
 let start_keycloak = () => {
@@ -111,8 +111,55 @@ let start_keycloak = () => {
         });
 }
 
-load_css('https://cdn.example.local/spinner.css');
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js').then(registration => {
+        // Registration was successful
+        console.log('[Service Worker] Registration successful with scope: ', registration.scope);
+
+        registration.addEventListener('updatefound', () => {
+            console.log('[Service Worker] Update found');
+
+            // An updated service worker has appeared in registration.installing!
+            let newWorker = registration.installing;
+
+            newWorker.addEventListener('statechange', () => {
+                console.log('[Service Worker] State change: ' + newWorker.state);
+                // Has service worker state changed?
+                switch (newWorker.state) {
+                case 'installed':
+                    // There is a new service worker available, show the notification
+                    if (navigator.serviceWorker.controller) {
+                        if (confirm('A new version of this app is available. Update?')) {
+                            newWorker.postMessage({action: 'skipWaiting'});
+                        }
+                    }
+                    break;
+                }
+            });
+        });
+    }).catch(error => {
+        // registration failed :(
+        console.log('[Service Worker] Registration failed: ', error);
+    });
+
+    navigator.serviceWorker.ready.then(registration => {
+       console.log('[Service Worker] Ready');
+    });
+
+    let refreshing;
+    // The event listener that is fired when the service worker updates
+    // Here we reload the page
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('[Service Worker] Controller change');
+        if (refreshing) return;
+        window.location.reload();
+        refreshing = true;
+    });
+}
+
+load_css(cdn + '/style.css');
 
 // shouldn't do this, should take jeroen@demo.kolab.org, use 'demo.kolab.org', find an end-point
 // somehow. we'd use demo.klab.cc to bring this point home.
-load_script('https://cdn.example.local/jquery.js', initialize);
+load_script(cdn + '/jquery.js', initialize);
