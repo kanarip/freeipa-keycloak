@@ -34,11 +34,13 @@ RUN dnf -y install \
     dnf clean all
 
 RUN sed -r -i \
-    -e 's|^configdirectory:.*$|configdirectory: /srv/imap/config/|g' \
-    -e 's|^partition-default:.*$|partition-default: /srv/imap/spool/default/|g' \
-    -e 's|^sievedir:.*$|sievedir: /srv/imap/config/sieve|g' \
+    -e 's|^configdirectory:.*$|configdirectory: /data/imap/config/|g' \
+    -e 's|^partition-default:.*$|partition-default: /data/imap/spool/default/|g' \
+    -e 's|^sievedir:.*$|sievedir: /data/imap/config/sieve|g' \
     -e 's|^allowplaintext:.*$|allowplaintext: no|g' \
-    /etc/imapd.conf
+    /etc/imapd.conf && \
+    echo "debug: 1" >> /etc/imapd.conf && \
+    echo "chatty: 1" >> /etc/imapd.conf
 
 RUN usermod -d /usr/libexec/cyrus-imapd cyrus
 RUN rm -rf /var/lib/imap /var/spool/imap

@@ -44,4 +44,21 @@ RUN dnf -y install \
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-ENTRYPOINT [ "/bin/bash", "/data/test/test.sh" ]
+ARG IPA_PASSWORD=Welcome2KolabSystems
+ARG IPA_USER=admin
+
+ADD freeipa-join.service /etc/systemd/system/freeipa-join.service
+ADD freeipa-join.sh /usr/local/sbin/freeipa-join.sh
+RUN chmod 750 /usr/local/sbin/freeipa-join.sh
+
+ADD kolab-test.service /etc/systemd/system/kolab-test.service
+
+RUN echo "IPA_PASSWORD=$IPA_PASSWORD" >> /etc/sysconfig/freeipa
+RUN echo "IPA_USER=$IPA_USER" >> /etc/sysconfig/freeipa
+
+RUN systemctl enable freeipa-join
+RUN systemctl enable kolab-test
+
+RUN ln -sf /bin/true /usr/libexec/hostname/nis-domainname
+
+ENTRYPOINT [ "/lib/systemd/systemd" ]

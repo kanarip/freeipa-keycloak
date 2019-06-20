@@ -31,11 +31,6 @@ services:
                 condition: service_healthy
         dns:
             - 172.16.66.1
-        healthcheck:
-            test: netstat -tlnp | grep -q :443
-            interval: 10s
-            timeout: 5s
-            retries: 12
         hostname: api
         links:
             - ipa:ipa.example.local
@@ -152,9 +147,11 @@ services:
         sysctls:
             - net.ipv6.conf.all.disable_ipv6=0
         volumes:
-            - ./data/imap/:/srv/imap/
+            - ./data/imap/:/data/imap/
 
     ipa:
+        build:
+            context: ./src/ipa/
         cap_add:
             - SYS_TIME
         container_name: kolab_ipa_1
@@ -166,7 +163,6 @@ services:
             timeout: 5s
             retries: 60
         hostname: ipa.example.local
-        image: freeipa/freeipa-server:latest
         networks:
             kolab:
                 ipv4_address: 172.16.66.1
@@ -266,14 +262,13 @@ services:
 
     test:
         build:
+            args:
+                IPA_PASSWORD: ${KEYCLOAK_PASSWORD:-Welcome2KolabSystems}
+                IPA_USER: ${KEYCLOAK_USER:-admin}
             context: ./src/test/
         container_name: kolab_test_1
         domainname: example.local
         depends_on:
-            api:
-                condition: service_healthy
-            demo:
-                condition: service_healthy
             ipa:
                 condition: service_healthy
             keycloak:
@@ -290,7 +285,7 @@ services:
             - keycloak:keycloak.example.local
         networks:
             kolab:
-                ipv4_address: 172.16.66.5
+                ipv4_address: 172.16.66.222
         stdin_open: true
         stop_signal: RTMIN+3
         sysctls:
@@ -300,5 +295,5 @@ services:
             - /tmp
         tty: true
         volumes:
-            - ./src/test/:/data/test/:Z
+            - ./data/test/:/data/test/:Z
             - /sys/fs/cgroup:/sys/fs/cgroup:ro

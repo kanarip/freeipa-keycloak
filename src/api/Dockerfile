@@ -39,7 +39,7 @@ RUN dnf -y install \
         which && \
     dnf clean all
 
-RUN pip3 install quart quart-openapi
+RUN pip3 install hypercorn quart quart-openapi
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -48,4 +48,16 @@ ENV QUART_DEBUG 1
 
 WORKDIR /data/api/
 
-ENTRYPOINT [ "/usr/local/bin/quart", "run", "/data/api/api.py" ]
+ENTRYPOINT [ \
+        "/usr/local/bin/hypercorn", \
+        "--debug", \
+        "--reload", \
+        "-w", "1", \
+        "--bind", "0.0.0.0:443", \
+        "--ca-certs", "/data/api/ca.cert", \
+        "--certfile", "/data/api/api.cert", \
+        "--keyfile", "/data/api/api.key", \
+        "api:app" \
+    ]
+
+EXPOSE 443/tcp
